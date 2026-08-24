@@ -54,9 +54,26 @@ function App() {
         </p>
       )}
       {!loading && !error && (
-        <ol>
+        <ol style={{ listStyle: "none", margin: 0, padding: 0 }}>
           {teams.map((team) => (
-            <li key={team}>{team}</li>
+            <li
+              key={team.name}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                padding: "0.35rem 0",
+              }}
+            >
+              <img
+                src={team.helmet_url}
+                alt={`${team.name} helmet`}
+                width={36}
+                height={36}
+                style={{ objectFit: "contain", flexShrink: 0 }}
+              />
+              <span>{team.name}</span>
+            </li>
           ))}
         </ol>
       )}
