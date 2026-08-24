@@ -33,7 +33,7 @@ function App() {
     <div
       style={{
         fontFamily: "system-ui, sans-serif",
-        maxWidth: 480,
+        maxWidth: 640,
         margin: "3rem auto",
         padding: "0 1rem",
         lineHeight: 1.5,
@@ -77,6 +77,17 @@ function App() {
               <span style={{ color: "#666", fontVariantNumeric: "tabular-nums" }}>
                 {team.wins}-{team.losses}
                 {team.ties ? `-${team.ties}` : ""}
+              </span>
+              <span
+                style={{
+                  color: "#999",
+                  fontSize: "0.85rem",
+                  width: 170,
+                  textAlign: "right",
+                  flexShrink: 0,
+                }}
+              >
+                {team.stadium}
               </span>
             </li>
           ))}

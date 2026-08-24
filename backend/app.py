@@ -3,8 +3,8 @@ Starter/test backend for the student deploy pipeline.
 
 On startup, creates a `teams` table (if it doesn't already exist) and seeds
 it with the 32 NFL team names + helmet image URLs + last season's win-loss
-record the first time it runs against an empty table. Exposes that list
-over a small JSON API that the frontend reads.
+record + home stadium the first time it runs against an empty table.
+Exposes that list over a small JSON API that the frontend reads.
 
 Reads its Postgres connection string from DATABASE_URL, which the deploy
 pipeline injects automatically (see templates/env.template in the
@@ -22,27 +22,43 @@ app = Flask(__name__)
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 
-# (name, ESPN team abbreviation, 2025 regular-season wins, losses, ties).
-# Helmet images are served from ESPN's public team-logo CDN rather than
-# stored in this repo -- the frontend just points an <img> at
-# HELMET_URL_TEMPLATE.format(abbr).
+# (name, ESPN team abbreviation, 2025 regular-season wins, losses, ties,
+# current home stadium). Helmet images are served from ESPN's public
+# team-logo CDN rather than stored in this repo -- the frontend just
+# points an <img> at HELMET_URL_TEMPLATE.format(abbr).
 NFL_TEAMS = [
-    ("Arizona Cardinals", "ari", 3, 14, 0), ("Atlanta Falcons", "atl", 8, 9, 0),
-    ("Baltimore Ravens", "bal", 8, 9, 0), ("Buffalo Bills", "buf", 12, 5, 0),
-    ("Carolina Panthers", "car", 8, 9, 0), ("Chicago Bears", "chi", 11, 6, 0),
-    ("Cincinnati Bengals", "cin", 6, 11, 0), ("Cleveland Browns", "cle", 5, 12, 0),
-    ("Dallas Cowboys", "dal", 7, 9, 1), ("Denver Broncos", "den", 14, 3, 0),
-    ("Detroit Lions", "det", 9, 8, 0), ("Green Bay Packers", "gb", 9, 7, 1),
-    ("Houston Texans", "hou", 12, 5, 0), ("Indianapolis Colts", "ind", 8, 9, 0),
-    ("Jacksonville Jaguars", "jax", 13, 4, 0), ("Kansas City Chiefs", "kc", 6, 11, 0),
-    ("Las Vegas Raiders", "lv", 3, 14, 0), ("Los Angeles Chargers", "lac", 11, 6, 0),
-    ("Los Angeles Rams", "lar", 12, 5, 0), ("Miami Dolphins", "mia", 7, 10, 0),
-    ("Minnesota Vikings", "min", 9, 8, 0), ("New England Patriots", "ne", 14, 3, 0),
-    ("New Orleans Saints", "no", 6, 11, 0), ("New York Giants", "nyg", 4, 13, 0),
-    ("New York Jets", "nyj", 3, 14, 0), ("Philadelphia Eagles", "phi", 11, 6, 0),
-    ("Pittsburgh Steelers", "pit", 10, 7, 0), ("San Francisco 49ers", "sf", 12, 5, 0),
-    ("Seattle Seahawks", "sea", 14, 3, 0), ("Tampa Bay Buccaneers", "tb", 8, 9, 0),
-    ("Tennessee Titans", "ten", 3, 14, 0), ("Washington Commanders", "wsh", 5, 12, 0),
+    ("Arizona Cardinals", "ari", 3, 14, 0, "State Farm Stadium"),
+    ("Atlanta Falcons", "atl", 8, 9, 0, "Mercedes-Benz Stadium"),
+    ("Baltimore Ravens", "bal", 8, 9, 0, "M&T Bank Stadium"),
+    ("Buffalo Bills", "buf", 12, 5, 0, "Highmark Stadium"),
+    ("Carolina Panthers", "car", 8, 9, 0, "Bank of America Stadium"),
+    ("Chicago Bears", "chi", 11, 6, 0, "Soldier Field"),
+    ("Cincinnati Bengals", "cin", 6, 11, 0, "Paycor Stadium"),
+    ("Cleveland Browns", "cle", 5, 12, 0, "Huntington Bank Field"),
+    ("Dallas Cowboys", "dal", 7, 9, 1, "AT&T Stadium"),
+    ("Denver Broncos", "den", 14, 3, 0, "Empower Field at Mile High"),
+    ("Detroit Lions", "det", 9, 8, 0, "Ford Field"),
+    ("Green Bay Packers", "gb", 9, 7, 1, "Lambeau Field"),
+    ("Houston Texans", "hou", 12, 5, 0, "NRG Stadium"),
+    ("Indianapolis Colts", "ind", 8, 9, 0, "Lucas Oil Stadium"),
+    ("Jacksonville Jaguars", "jax", 13, 4, 0, "EverBank Stadium"),
+    ("Kansas City Chiefs", "kc", 6, 11, 0, "Arrowhead Stadium"),
+    ("Las Vegas Raiders", "lv", 3, 14, 0, "Allegiant Stadium"),
+    ("Los Angeles Chargers", "lac", 11, 6, 0, "SoFi Stadium"),
+    ("Los Angeles Rams", "lar", 12, 5, 0, "SoFi Stadium"),
+    ("Miami Dolphins", "mia", 7, 10, 0, "Hard Rock Stadium"),
+    ("Minnesota Vikings", "min", 9, 8, 0, "U.S. Bank Stadium"),
+    ("New England Patriots", "ne", 14, 3, 0, "Gillette Stadium"),
+    ("New Orleans Saints", "no", 6, 11, 0, "Caesars Superdome"),
+    ("New York Giants", "nyg", 4, 13, 0, "MetLife Stadium"),
+    ("New York Jets", "nyj", 3, 14, 0, "MetLife Stadium"),
+    ("Philadelphia Eagles", "phi", 11, 6, 0, "Lincoln Financial Field"),
+    ("Pittsburgh Steelers", "pit", 10, 7, 0, "Acrisure Stadium"),
+    ("San Francisco 49ers", "sf", 12, 5, 0, "Levi's Stadium"),
+    ("Seattle Seahawks", "sea", 14, 3, 0, "Lumen Field"),
+    ("Tampa Bay Buccaneers", "tb", 8, 9, 0, "Raymond James Stadium"),
+    ("Tennessee Titans", "ten", 3, 14, 0, "Nissan Stadium"),
+    ("Washington Commanders", "wsh", 5, 12, 0, "Northwest Stadium"),
 ]
 
 HELMET_URL_TEMPLATE = "https://a.espncdn.com/i/teamlogos/nfl/500/{abbr}.png"
@@ -55,7 +71,7 @@ def get_connection():
 def init_db(retries: int = 10, delay_seconds: int = 2) -> None:
     """Creates + seeds the teams table, and migrates older databases that
     already have a `teams` table without the helmet_url / wins / losses /
-    ties columns.
+    ties / stadium columns.
 
     CREATE TABLE IF NOT EXISTS only helps brand-new databases -- an
     existing `teams` table (e.g. from before these columns existed) is
@@ -90,7 +106,8 @@ def init_db(retries: int = 10, delay_seconds: int = 2) -> None:
                     helmet_url TEXT,
                     wins INTEGER,
                     losses INTEGER,
-                    ties INTEGER
+                    ties INTEGER,
+                    stadium TEXT
                 )
                 """
             )
@@ -102,16 +119,17 @@ def init_db(retries: int = 10, delay_seconds: int = 2) -> None:
                     ADD COLUMN IF NOT EXISTS helmet_url TEXT,
                     ADD COLUMN IF NOT EXISTS wins INTEGER,
                     ADD COLUMN IF NOT EXISTS losses INTEGER,
-                    ADD COLUMN IF NOT EXISTS ties INTEGER
+                    ADD COLUMN IF NOT EXISTS ties INTEGER,
+                    ADD COLUMN IF NOT EXISTS stadium TEXT
                 """
             )
 
             # Backfill any row (old or newly created above) that's missing
-            # its helmet_url and/or record -- e.g. the 32 rows seeded by a
-            # pre-migration deploy. helmet_url and wins are backfilled
-            # independently (separate IS NULL checks) so a database that
-            # already has one but not the other still gets the missing
-            # piece filled in.
+            # its helmet_url and/or record and/or stadium -- e.g. the 32
+            # rows seeded by a pre-migration deploy. Each column is
+            # backfilled independently (separate IS NULL checks) so a
+            # database that already has some of these but not others still
+            # gets just the missing pieces filled in.
             cur.executemany(
                 """
                 UPDATE teams SET helmet_url = %s
@@ -119,7 +137,7 @@ def init_db(retries: int = 10, delay_seconds: int = 2) -> None:
                 """,
                 [
                     (HELMET_URL_TEMPLATE.format(abbr=abbr), name)
-                    for name, abbr, wins, losses, ties in NFL_TEAMS
+                    for name, abbr, wins, losses, ties, stadium in NFL_TEAMS
                 ],
             )
             cur.executemany(
@@ -129,7 +147,17 @@ def init_db(retries: int = 10, delay_seconds: int = 2) -> None:
                 """,
                 [
                     (wins, losses, ties, name)
-                    for name, abbr, wins, losses, ties in NFL_TEAMS
+                    for name, abbr, wins, losses, ties, stadium in NFL_TEAMS
+                ],
+            )
+            cur.executemany(
+                """
+                UPDATE teams SET stadium = %s
+                WHERE name = %s AND stadium IS NULL
+                """,
+                [
+                    (stadium, name)
+                    for name, abbr, wins, losses, ties, stadium in NFL_TEAMS
                 ],
             )
 
@@ -138,12 +166,12 @@ def init_db(retries: int = 10, delay_seconds: int = 2) -> None:
             if count == 0:
                 cur.executemany(
                     """
-                    INSERT INTO teams (name, helmet_url, wins, losses, ties)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO teams (name, helmet_url, wins, losses, ties, stadium)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     """,
                     [
-                        (name, HELMET_URL_TEMPLATE.format(abbr=abbr), wins, losses, ties)
-                        for name, abbr, wins, losses, ties in NFL_TEAMS
+                        (name, HELMET_URL_TEMPLATE.format(abbr=abbr), wins, losses, ties, stadium)
+                        for name, abbr, wins, losses, ties, stadium in NFL_TEAMS
                     ],
                 )
                 print(f"[init_db] seeded {len(NFL_TEAMS)} teams", flush=True)
@@ -157,7 +185,7 @@ def list_teams():
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT name, helmet_url, wins, losses, ties FROM teams ORDER BY name"
+                "SELECT name, helmet_url, wins, losses, ties, stadium FROM teams ORDER BY name"
             )
             teams = [
                 {
@@ -166,8 +194,9 @@ def list_teams():
                     "wins": wins,
                     "losses": losses,
                     "ties": ties,
+                    "stadium": stadium,
                 }
-                for name, helmet_url, wins, losses, ties in cur.fetchall()
+                for name, helmet_url, wins, losses, ties, stadium in cur.fetchall()
             ]
         return jsonify(teams)
     finally:
