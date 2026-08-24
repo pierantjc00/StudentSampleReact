@@ -42,9 +42,10 @@ function App() {
       <h1>NFL Teams</h1>
       <p style={{ color: "#666" }}>
         This list is loaded from Postgres through the backend at{" "}
-        <code>{API_URL}</code> — if you're seeing 32 team names below, the
-        full pipeline is working end to end: GitHub push → webhook →
-        deploy.sh → React build → Flask → shared Postgres.
+        <code>{API_URL}</code> — if you're seeing 32 team names below with
+        last season's record, the full pipeline is working end to end:
+        GitHub push → webhook → deploy.sh → React build → Flask → shared
+        Postgres.
       </p>
 
       {loading && <p>Loading…</p>}
@@ -72,7 +73,11 @@ function App() {
                 height={36}
                 style={{ objectFit: "contain", flexShrink: 0 }}
               />
-              <span>{team.name}</span>
+              <span style={{ flex: 1 }}>{team.name}</span>
+              <span style={{ color: "#666", fontVariantNumeric: "tabular-nums" }}>
+                {team.wins}-{team.losses}
+                {team.ties ? `-${team.ties}` : ""}
+              </span>
             </li>
           ))}
         </ol>
